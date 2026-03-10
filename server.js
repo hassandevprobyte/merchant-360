@@ -1,15 +1,34 @@
 require("colors");
 const express = require("express");
 const cors = require("cors");
+const compression = require("compression");
+const helmet = require("helmet");
+const path = require("path");
+const mongoSanitize = require("express-mongo-sanitize");
+const cookieParser = require("cookie-parser");
 
+const bootstrap = require("./bootstrap");
 const { env, corsOptions } = require("./config");
 
+bootstrap();
+
 const app = express();
+
+// app.use(helmet());
 
 app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// app.use(mongoSanitize());
+
+app.use(cookieParser());
+
+app.use(compression());
+
+app.use("/public", express.static(path.join(__dirname, "public")));
+app.use(`${env.API_VERSION}/auth`, require("./routes/authRoute"));
 
 app.get("/", (req, res) => {
   res
