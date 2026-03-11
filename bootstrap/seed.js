@@ -4,6 +4,9 @@ const bcrypt = require("bcrypt");
 // Constants
 const SCOPE = require("../constants/SCOPE");
 
+// Configs
+const { env } = require("../config");
+
 exports.createSuperAdminRole = async () => {
   try {
     const roleExists = await mongoose.connection.db
@@ -47,8 +50,8 @@ exports.createSuperAdminUser = async () => {
   try {
     const superAdminUserPayload = {
       name: "super admin",
-      email: "superadmin@siliconcrmlive.com",
-      password: bcrypt.hashSync("Abcd1234", 10),
+      email: env.SUPER_ADMIN.EMAIL,
+      password: bcrypt.hashSync(env.SUPER_ADMIN.PASSWORD, 10),
       isActive: true,
     };
 

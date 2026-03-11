@@ -11,7 +11,6 @@ const protect = require("../middlewares/authMiddleware");
 router.post("/login", rateLimiter, authController.login);
 router.get("/refresh", authController.refresh);
 router.post("/logout", authController.logout);
-router.use(protect);
-router.patch("/changePassword", authController.changePassword);
+router.patch("/changePassword", protect, authController.changePassword);
 
 module.exports = router;
