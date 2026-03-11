@@ -13,6 +13,8 @@ const envSchema = Joi.object({
   JWT_SECRET: Joi.string().required(),
   ACCESS_TOKEN_SECRET: Joi.string().required(),
   REFRESH_TOKEN_SECRET: Joi.string().required(),
+  SUPER_ADMIN_EMAIL: Joi.string().email().required(),
+  SUPER_ADMIN_PASSWORD: Joi.string().min(6).required(),
 }).unknown(true);
 
 const { value: envVars, error } = envSchema
@@ -30,6 +32,10 @@ const env = {
     SECRET: envVars.JWT_SECRET,
     ACCESS_TOKEN: envVars.ACCESS_TOKEN_SECRET,
     REFRESH_TOKEN: envVars.REFRESH_TOKEN_SECRET,
+  },
+  SUPER_ADMIN: {
+    EMAIL: envVars.SUPER_ADMIN_EMAIL,
+    PASSWORD: envVars.SUPER_ADMIN_PASSWORD,
   },
 };
 

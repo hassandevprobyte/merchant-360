@@ -19,40 +19,10 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: [true, "password is required"],
     },
-    brands: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Brand",
-        required: [true, "brands are required"],
-      },
-    ],
-    usesBrandAliases: {
-      type: Boolean,
-      default: false,
-    },
-    brandAliases: [
-      {
-        _id: false,
-        brand: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Brand",
-        },
-        name: {
-          type: String,
-          lowercase: true,
-          trim: true,
-        },
-        email: {
-          type: String,
-          lowercase: true,
-          trim: true,
-        },
-      },
-    ],
     roleAndPermissions: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Role",
-      required: [true, "role and permissions is required"],
+      required: [true, "role and permissions are required"],
     },
     isActive: {
       type: Boolean,

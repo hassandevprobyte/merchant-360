@@ -1,7 +1,6 @@
-const User = require("../model/User");
+const User = require("../models/User");
 
 const POPULATION_PIPELINE = [
-  { path: "brandAliases.brand" },
   { path: "roleAndPermissions" },
 ];
 

@@ -36,14 +36,14 @@ const RoleSchema = new mongoose.Schema(
     ],
     scope: {
       type: String,
-      enum: [SCOPE.OWN, SCOPE.BRAND, SCOPE.ALL],
+      enum: [SCOPE.OWN, SCOPE.COMPANY, SCOPE.ALL],
       required: [true, "scope is required"],
       trim: true,
       lowercase: true,
     },
     indexPath: {
       type: String,
-      required: [true, "scope is required"],
+      required: [true, "Index path is required"],
       trim: true,
       lowercase: true,
     },
