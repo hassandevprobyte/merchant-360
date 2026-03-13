@@ -19,6 +19,6 @@ exports.error = {
   },
   merchant: {
     notFound: "Merchant not found",
-    titleExists: "Merchant already exists",
+    titleExists: "Merchant title already exists",
   },
 };

@@ -15,6 +15,7 @@ const envSchema = Joi.object({
   REFRESH_TOKEN_SECRET: Joi.string().required(),
   SUPER_ADMIN_EMAIL: Joi.string().email().required(),
   SUPER_ADMIN_PASSWORD: Joi.string().min(6).required(),
+  STRIPE_SECRET_KEY: Joi.string().required(),
 }).unknown(true);
 
 const { value: envVars, error } = envSchema
@@ -37,6 +38,7 @@ const env = {
     EMAIL: envVars.SUPER_ADMIN_EMAIL,
     PASSWORD: envVars.SUPER_ADMIN_PASSWORD,
   },
+  STRIPE_SECRET_KEY: envVars.STRIPE_SECRET_KEY,
 };
 
 module.exports = env;

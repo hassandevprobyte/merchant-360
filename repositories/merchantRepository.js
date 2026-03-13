@@ -1,8 +1,8 @@
 const Merchant = require("../models/Merchant");
 
 exports.getAllMerchants = async (filters) => {
-    return Merchant.find(filters).lean();
-}
+  return Merchant.find(filters).lean();
+};
 
 exports.getMerchantsWithPagination = async (filters, offset, pageSize) => {
   return Merchant.find(filters)
@@ -25,12 +25,12 @@ exports.findMerchantById = async (id) => {
 };
 
 exports.updateMerchant = async (filters, payload) => {
-  return Merchant.create(filters, payload, {
+  return Merchant.findOneAndUpdate(filters, payload, {
     new: true,
     runValidators: true,
   }).lean();
 };
 
-exports.getMerchantsCount = async (filters)=> {
-    return Merchant.countDocuments(filters);
-}
+exports.getMerchantsCount = async (filters) => {
+  return Merchant.countDocuments(filters);
+};
