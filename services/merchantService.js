@@ -84,5 +84,6 @@ exports.updateMerchant = async (payload) => {
     updatePayload.isActive = validatedPayload.isActive;
   }
 
-  return merchantRepository.updateMerchant(updatePayload);
+  const updateFilters = { _id: validatedPayload.id };
+  return merchantRepository.updateMerchant(updateFilters, updatePayload);
 };

@@ -22,9 +22,7 @@ exports.login = async (payload) => {
   const user = await authValidation.throwErrorIfUserEmailDoesNotExist(
     validatedPayload.email,
   );
-  console.log(user);
   await user.populate("roleAndPermissions");
-  console.log("test");
 
   if (!user.isActive) {
     throw Boom.forbidden(message.error.auth.accessDenied);

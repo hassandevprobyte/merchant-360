@@ -7,7 +7,7 @@ const MERCHANT_TYPES = require("../../../constants/MERCHANT_TYPES");
 exports.getMerchantById = objectId.required();
 
 exports.createMerchant = Joi.object({
-  title: Joi.string().required(),
+  title: Joi.string().lowercase().required(),
   type: Joi.string()
     .valid(...Object.values(MERCHANT_TYPES))
     .required(),
@@ -16,7 +16,7 @@ exports.createMerchant = Joi.object({
 
 exports.updateMerchant = Joi.object({
   id: objectId.required(),
-  title: Joi.string().optional(),
+  title: Joi.string().lowercase().optional(),
   type: Joi.string()
     .valid(...Object.values(MERCHANT_TYPES))
     .optional(),
