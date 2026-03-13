@@ -28,7 +28,7 @@ exports.getTransactions = async (filters) => {
     });
 
     stream.on("end", () => {
-      resolve(transactions); // All transactions collected
+      resolve(transactions);
     });
 
     stream.on("error", (err) => {
