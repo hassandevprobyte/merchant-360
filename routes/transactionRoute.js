@@ -8,9 +8,9 @@ const authorizeProvider = require("../providers/authorizeProvider");
 
 router.route("/stripe").get(async (req, res) => {
   try {
-    const transactions = await stripeProvider.getTransactions();
+    const StripeTransactions = await stripeProvider.getTransactions();
 
-    res.status(200).json(transactions);
+    res.status(200).json(StripeTransactions);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -18,9 +18,9 @@ router.route("/stripe").get(async (req, res) => {
 
 router.route("/braintree").get(async (req, res) => {
   try {
-    const transactions = await brainTreeProvider.getTransactions();
+    const BrainTreeTransactions = await brainTreeProvider.getTransactions();
 
-    res.status(200).json(transactions);
+    res.status(200).json(BrainTreeTransactions);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -28,9 +28,27 @@ router.route("/braintree").get(async (req, res) => {
 
 router.route("/authorize").get(async (req, res) => {
   try {
-    const transactions = await authorizeProvider.getTransactionList();
+    const AuthorizeTransactions = await authorizeProvider.getTransactions();
 
-    res.status(200).json(transactions);
+    res.status(200).json(AuthorizeTransactions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.route("/").get(async (req, res) => {
+  try {
+    const StripeTransactions = await stripeProvider.getTransactions();
+    const BrainTreeTransactions = await brainTreeProvider.getTransactions();
+    const AuthorizeTransactions = await authorizeProvider.getTransactions();
+
+    res
+      .status(200)
+      .json([
+        ...StripeTransactions,
+        ...BrainTreeTransactions,
+        ...AuthorizeTransactions,
+      ]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
