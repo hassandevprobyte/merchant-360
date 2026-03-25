@@ -14,11 +14,15 @@ const MerchantSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: Object.values(MERCHANT_TYPES),
+      enum: Object.values(MERCHANT_TYPES).map((m) => m.type),
     },
     isActive: {
       type: Boolean,
       default: true,
+    },
+    credentials: {
+      type: Map,
+      default: {},
     },
   },
   { timestamps: true },

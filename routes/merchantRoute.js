@@ -9,7 +9,7 @@ router
   .route("/")
   .get(merchantController.getMerchantsWithPagination)
   .post(merchantController.createMerchant);
-
+router.route("/types").get(merchantController.getMerchantTypes);
 router
   .route("/:id")
   .get(merchantController.getMerchantById)

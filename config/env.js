@@ -10,6 +10,8 @@ const envSchema = Joi.object({
     .default("development"),
   MONGO_URI: Joi.string().uri().required(),
   API_VERSION: Joi.string().default("/api/v1"),
+  ENCRYPTION_SECRET: Joi.string(),
+  ENCRYPTION_ALGORITHM: Joi.string(),
   JWT_SECRET: Joi.string().required(),
   ACCESS_TOKEN_SECRET: Joi.string().required(),
   REFRESH_TOKEN_SECRET: Joi.string().required(),
@@ -29,6 +31,8 @@ const env = {
   NODE_ENV: envVars.NODE_ENV,
   MONGO_URI: envVars.MONGO_URI,
   API_VERSION: envVars.API_VERSION,
+  ENCRYPTION_SECRET: envVars.ENCRYPTION_SECRET,
+  ENCRYPTION_ALGORITHM: envVars.ENCRYPTION_ALGORITHM,
   JWT: {
     SECRET: envVars.JWT_SECRET,
     ACCESS_TOKEN: envVars.ACCESS_TOKEN_SECRET,

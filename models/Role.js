@@ -36,7 +36,7 @@ const RoleSchema = new mongoose.Schema(
     ],
     scope: {
       type: String,
-      enum: [SCOPE.OWN, SCOPE.COMPANY, SCOPE.ALL],
+      enum: [SCOPE.OWN, SCOPE.ALL],
       required: [true, "scope is required"],
       trim: true,
       lowercase: true,

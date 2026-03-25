@@ -5,111 +5,113 @@ const ApiControllers = require("authorizenet").APIControllers;
 const authorizeHelper = require("../helpers/authorizeHelper");
 
 async function getSettledBatches() {
-  const merchantAuthenticationType =
-    new ApiContracts.MerchantAuthenticationType();
-
-  merchantAuthenticationType.setName(process.env.AUTHORIZE_NET_API_LOGIN_ID);
-  merchantAuthenticationType.setTransactionKey(
-    process.env.AUTHORIZE_NET_TRANSACTION_KEY,
-  );
+  const merchantAuth = new ApiContracts.MerchantAuthenticationType();
+  merchantAuth.setName(process.env.AUTHORIZE_NET_API_LOGIN_ID);
+  merchantAuth.setTransactionKey(process.env.AUTHORIZE_NET_TRANSACTION_KEY);
 
   const request = new ApiContracts.GetSettledBatchListRequest();
-  request.setMerchantAuthentication(merchantAuthenticationType);
+  request.setMerchantAuthentication(merchantAuth);
 
-  const apiResponse = await authorizeHelper.executeController(
-    ApiControllers.GetSettledBatchListController,
-    request,
+  const response = new ApiContracts.GetSettledBatchListResponse(
+    await authorizeHelper.executeController(
+      ApiControllers.GetSettledBatchListController,
+      request,
+    ),
   );
-
-  const response = new ApiContracts.GetSettledBatchListResponse(apiResponse);
 
   if (response.getMessages().getResultCode() !== "Ok") {
     throw new Error(response.getMessages().getMessage()[0].getText());
   }
 
-  const batchList = response.getBatchList();
-
-  if (!batchList) return [];
-
-  return batchList.getBatch() || [];
+  return response.getBatchList()?.getBatch() || [];
 }
 
 async function getTransactionsByBatch(batchId) {
-  const merchantAuthenticationType =
-    new ApiContracts.MerchantAuthenticationType();
-
-  merchantAuthenticationType.setName(process.env.AUTHORIZE_NET_API_LOGIN_ID);
-  merchantAuthenticationType.setTransactionKey(
-    process.env.AUTHORIZE_NET_TRANSACTION_KEY,
-  );
+  const merchantAuth = new ApiContracts.MerchantAuthenticationType();
+  merchantAuth.setName(process.env.AUTHORIZE_NET_API_LOGIN_ID);
+  merchantAuth.setTransactionKey(process.env.AUTHORIZE_NET_TRANSACTION_KEY);
 
   const request = new ApiContracts.GetTransactionListRequest();
-  request.setMerchantAuthentication(merchantAuthenticationType);
+  request.setMerchantAuthentication(merchantAuth);
   request.setBatchId(batchId);
 
-  const apiResponse = await authorizeHelper.executeController(
-    ApiControllers.GetTransactionListController,
-    request,
+  const response = new ApiContracts.GetTransactionListResponse(
+    await authorizeHelper.executeController(
+      ApiControllers.GetTransactionListController,
+      request,
+    ),
   );
-
-  const response = new ApiContracts.GetTransactionListResponse(apiResponse);
 
   if (response.getMessages().getResultCode() !== "Ok") {
     throw new Error(response.getMessages().getMessage()[0].getText());
   }
 
-  const txWrapper = response.getTransactions();
-
-  if (!txWrapper) return [];
-
-  return txWrapper.getTransaction() || [];
+  return response.getTransactions()?.getTransaction() || [];
 }
 
 async function getUnsettledTransactions() {
-  const merchantAuthenticationType =
-    new ApiContracts.MerchantAuthenticationType();
-
-  merchantAuthenticationType.setName(process.env.AUTHORIZE_NET_API_LOGIN_ID);
-  merchantAuthenticationType.setTransactionKey(
-    process.env.AUTHORIZE_NET_TRANSACTION_KEY,
-  );
+  const merchantAuth = new ApiContracts.MerchantAuthenticationType();
+  merchantAuth.setName(process.env.AUTHORIZE_NET_API_LOGIN_ID);
+  merchantAuth.setTransactionKey(process.env.AUTHORIZE_NET_TRANSACTION_KEY);
 
   const request = new ApiContracts.GetUnsettledTransactionListRequest();
-  request.setMerchantAuthentication(merchantAuthenticationType);
-
-  const apiResponse = await authorizeHelper.executeController(
-    ApiControllers.GetUnsettledTransactionListController,
-    request,
-  );
+  request.setMerchantAuthentication(merchantAuth);
 
   const response = new ApiContracts.GetUnsettledTransactionListResponse(
-    apiResponse,
+    await authorizeHelper.executeController(
+      ApiControllers.GetUnsettledTransactionListController,
+      request,
+    ),
   );
 
   if (response.getMessages().getResultCode() !== "Ok") {
     throw new Error(response.getMessages().getMessage()[0].getText());
   }
 
-  const txWrapper = response.getTransactions();
-
-  if (!txWrapper) return [];
-
-  return txWrapper.getTransaction() || [];
+  return response.getTransactions()?.getTransaction() || [];
 }
 
-async function getTransactions() {
+const getTransactions = async (filters = {}, page = 1, pageSize = 50) => {
   const batches = await getSettledBatches();
 
-  const batchPromises = batches.map((batch) =>
-    getTransactionsByBatch(batch.getBatchId()),
+  const batchPromises = batches.map((b) =>
+    getTransactionsByBatch(b.getBatchId()),
   );
-
   const [batchTransactions, unsettled] = await Promise.all([
     Promise.all(batchPromises),
     getUnsettledTransactions(),
   ]);
 
-  return [...batchTransactions.flat(), ...unsettled];
-}
+  let allTransactions = [...batchTransactions.flat(), ...unsettled];
+
+  // Apply filters inside provider
+  if (filters.startDate)
+    allTransactions = allTransactions.filter(
+      (t) => new Date(t.getSubmitTimeUTC()) >= new Date(filters.startDate),
+    );
+  if (filters.endDate)
+    allTransactions = allTransactions.filter(
+      (t) => new Date(t.getSubmitTimeUTC()) <= new Date(filters.endDate),
+    );
+  if (filters.status)
+    allTransactions = allTransactions.filter(
+      (t) => t.getTransactionStatus() === filters.status,
+    );
+
+  // Page-based pagination
+  const start = (page - 1) * pageSize;
+  const paginated = allTransactions.slice(start, start + pageSize);
+
+  return {
+    data: paginated,
+    meta: {
+      pageSize,
+      count: paginated.length,
+      hasMore: allTransactions.length > start + pageSize,
+      nextCursor: allTransactions.length > start + pageSize ? page + 1 : null,
+      previousCursor: page > 1 ? page - 1 : null,
+    },
+  };
+};
 
 module.exports.getTransactions = getTransactions;
