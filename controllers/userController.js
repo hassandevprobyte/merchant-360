@@ -6,20 +6,11 @@ const userService = require("../services/userService");
 // Utilities
 const transformQueryParams = require("../utils/transformQueryToMongooseSyntax");
 
-// Scope
-const userScope = require("../scopes/userScope");
-
 // @desc    Get all users
 // @route   GET /api/v1/users/all
 // @access  Private
 exports.getAllUsers = asyncHandler(async (req, res) => {
-  const scopeQuery = userScope.scope(
-    req.user,
-    req.query?.query?.roleAndPermissions,
-  );
-
   const filters = transformQueryParams("User", {
-    ...scopeQuery,
     ...req.query.query,
   });
 
@@ -32,11 +23,8 @@ exports.getAllUsers = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/users
 // @access  Private
 exports.getUsersWithPagination = asyncHandler(async (req, res) => {
-  const scopeQuery = userScope.scope(req.user);
-
   const payload = {
     filters: transformQueryParams("User", {
-      ...scopeQuery,
       ...req.query.query,
     }),
     page: parseInt(req.query.page) || 1,
@@ -52,8 +40,6 @@ exports.getUsersWithPagination = asyncHandler(async (req, res) => {
 // @route   GET /api/v1/users/:id
 // @access  Private
 exports.getUserById = asyncHandler(async (req, res) => {
-  await userScope.authorizeByScope(req.user, req.params.id);
-
   const data = await userService.getUserById(req.params.id);
 
   res.status(200).json(data);
@@ -80,8 +66,6 @@ exports.createUser = asyncHandler(async (req, res) => {
 // @route   PATCH /api/v1/users/:id
 // @access  Private
 exports.updateUser = asyncHandler(async (req, res) => {
-  await userScope.authorizeByScope(req.user, req.params.id);
-
   const payload = {
     id: req.params.id,
     name: req.body.name,
@@ -100,8 +84,6 @@ exports.updateUser = asyncHandler(async (req, res) => {
 // @route   DELETE /api/v1/users/:id
 // @access  Private
 exports.deleteUser = asyncHandler(async (req, res) => {
-  await userScope.authorizeByScope(req.user, req.params.id);
-
   const data = await userService.deleteUser(req.params.id);
 
   res.status(200).json(data);

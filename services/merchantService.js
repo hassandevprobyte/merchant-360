@@ -6,6 +6,9 @@ const joiSchema = require("../validations/joi/schema/merchant");
 // repositories
 const merchantRepository = require("../repositories/merchantRepository");
 
+// Utils
+const encryptData = require("../utils/encryptData");
+
 exports.getAllMerchants = async (filters) => {
   return merchantRepository.getAllMerchants(filters);
 };
@@ -42,6 +45,10 @@ exports.createMerchant = async (payload) => {
 
   await merchantValidation.throwErrorIfMerchantTitleAlreadyExists(
     validatedPayload.title,
+  );
+
+  validatedPayload.credentials = encryptData.encryptObjectValues(
+    validatedPayload.credentials,
   );
 
   const createPayload = { ...validatedPayload };

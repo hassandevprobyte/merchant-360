@@ -8,31 +8,47 @@ const gateway = new braintree.BraintreeGateway({
   privateKey: process.env.BRAINTREE_PRIVATE_KEY,
 });
 
-// Returns a promise that resolves to an array of transactions
-exports.getTransactions = async (filters) => {
-  const transactions = [];
-
-  const stream = gateway.transaction.search((search) => {
-    search
-      .status()
-      .in([
-        braintree.Transaction.Status.Settled,
-        braintree.Transaction.Status.Settling,
-        braintree.Transaction.Status.SubmittedForSettlement,
-      ]);
-  });
-
+exports.getTransactions = async (filters = {}, page = 1, pageSize = 50) => {
   return new Promise((resolve, reject) => {
+    const transactions = [];
+    const skip = (page - 1) * pageSize;
+    let index = 0;
+
+    const stream = gateway.transaction.search((search) => {
+      search
+        .status()
+        .in([
+          braintree.Transaction.Status.Settled,
+          braintree.Transaction.Status.Settling,
+          braintree.Transaction.Status.SubmittedForSettlement,
+        ]);
+
+      if (filters.startDate)
+        search.createdAt().min(new Date(filters.startDate));
+      if (filters.endDate) search.createdAt().max(new Date(filters.endDate));
+      if (filters.status) search.status().in([filters.status]);
+    });
+
     stream.on("data", (transaction) => {
-      transactions.push(transaction);
+      if (index >= skip && transactions.length < pageSize) {
+        transactions.push(transaction);
+      }
+      index++;
+      if (transactions.length === pageSize) stream.pause();
     });
 
-    stream.on("end", () => {
-      resolve(transactions);
-    });
+    stream.on("end", () =>
+      resolve({
+        data: transactions,
+        meta: {
+          pageSize,
+          hasMore: index > page * pageSize,
+          nextCursor: transactions.length === pageSize ? page + 1 : null,
+          previousCursor: page > 1 ? page - 1 : null,
+        },
+      }),
+    );
 
-    stream.on("error", (err) => {
-      reject(err);
-    });
+    stream.on("error", reject);
   });
 };

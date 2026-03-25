@@ -1,6 +1,5 @@
 const SCOPE = {
   OWN: "own",
-  COMPANY: "company",
   ALL: "all",
 };
 

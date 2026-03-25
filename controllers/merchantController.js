@@ -6,11 +6,18 @@ const merchantService = require("../services/merchantService");
 // Utilities
 const transformQueryParams = require("../utils/transformQueryToMongooseSyntax");
 
+// constatns
+const MERCHANT_TYPES = require("../constants/MERCHANT_TYPES");
+
 exports.getAllMerchants = asyncHandler(async (req, res) => {
   const filters = transformQueryParams("Merchant", req.query.query);
   const data = await merchantService.getAllMerchants(filters);
 
   res.status(200).json(data);
+});
+
+exports.getMerchantTypes = asyncHandler(async (req, res) => {
+  res.status(200).json(MERCHANT_TYPES);
 });
 
 exports.getMerchantsWithPagination = asyncHandler(async (req, res) => {
@@ -36,6 +43,7 @@ exports.createMerchant = asyncHandler(async (req, res) => {
     title: req.body.title,
     type: req.body.type,
     isActive: req.body.isActive,
+    credentials: req.body.credentials,
   };
 
   const data = await merchantService.createMerchant(payload);
