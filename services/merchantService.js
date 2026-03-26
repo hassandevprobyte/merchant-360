@@ -85,8 +85,8 @@ exports.updateMerchant = async (payload) => {
   }
 
   if (
-    validatedPayload.isActive &&
-    validatedPayload.isActive !== existingMerchant.isActive
+    typeof validatedPayload.isActive !== "undefined" &&
+    validatedPayload.isActive !== existingMarketingPlatform.isActive
   ) {
     updatePayload.isActive = validatedPayload.isActive;
   }

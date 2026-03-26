@@ -1,14 +1,18 @@
 require("dotenv").config();
+const Boom = require("@hapi/boom");
 const braintree = require("braintree");
 
-const gateway = new braintree.BraintreeGateway({
-  environment: braintree.Environment.Sandbox,
-  merchantId: process.env.BRAINTREE_MERCHANT_ID,
-  publicKey: process.env.BRAINTREE_PUBLIC_KEY,
-  privateKey: process.env.BRAINTREE_PRIVATE_KEY,
-});
+const getBraintree = (credentials) => {
+  return new braintree.BraintreeGateway({
+    environment: braintree.Environment.Sandbox,
+    merchantId: credentials?.merchantId || process.env.BRAINTREE_MERCHANT_ID,
+    publicKey: credentials?.publicKey || process.env.BRAINTREE_PUBLIC_KEY,
+    privateKey: credentials?.privateKey || process.env.BRAINTREE_PRIVATE_KEY,
+  });
+};
 
 exports.getTransactions = async (filters = {}, page = 1, pageSize = 50) => {
+  const gateway = getBraintree();
   return new Promise((resolve, reject) => {
     const transactions = [];
     const skip = (page - 1) * pageSize;
@@ -50,5 +54,90 @@ exports.getTransactions = async (filters = {}, page = 1, pageSize = 50) => {
     );
 
     stream.on("error", reject);
+  });
+};
+
+exports.createPaymentLink = async (amount, credentials) => {
+  try {
+    const gateway = getBraintree(credentials);
+
+    const clientToken = await gateway.clientToken.generate({});
+
+    return {
+      clientToken: clientToken.clientToken,
+      amount,
+    };
+  } catch (error) {
+    throw Boom.badRequest(error.message || "Something went wrong");
+  }
+};
+
+exports.refundPayment = async (amount, transactionId, credentials) => {
+  const gateway = getBraintree(credentials);
+
+  if (!transactionId) {
+    throw Boom.badRequest("Transaction ID is required");
+  }
+
+  // Find the transaction first
+  const transaction = await gateway.transaction.find(transactionId);
+
+  if (!transaction) {
+    throw Boom.notFound("Transaction not found");
+  }
+
+  // Only settled or settling transactions can be refunded
+  if (transaction.status !== "settled" && transaction.status !== "settling") {
+    throw Boom.badRequest(
+      `Transaction cannot be refunded. Status: ${transaction.status}`,
+    );
+  }
+
+  const totalAmount = parseFloat(transaction.amount);
+
+  // Calculate already refunded amount
+  const refundedAmount = transaction.refunds
+    ? transaction.refunds.reduce(
+        (sum, refund) => sum + parseFloat(refund.amount),
+        0,
+      )
+    : 0;
+
+  const refundableAmount = totalAmount - refundedAmount;
+
+  let refundAmount;
+
+  // Validate amount
+  if (amount !== undefined && amount !== null) {
+    if (typeof amount !== "number" || isNaN(amount)) {
+      throw Boom.badRequest("Amount must be a valid number");
+    }
+
+    if (amount <= 0) {
+      throw Boom.badRequest("Amount must be greater than 0");
+    }
+
+    if (amount > refundableAmount) {
+      throw Boom.badRequest(
+        "Refund amount exceeds remaining refundable amount",
+      );
+    }
+
+    refundAmount = amount.toFixed(2);
+  }
+
+  // Refund transaction
+  return new Promise((resolve, reject) => {
+    gateway.transaction.refund(transactionId, refundAmount, (err, result) => {
+      if (err) return reject(err);
+      if (!result.success) return reject(Boom.badRequest(result.message));
+
+      resolve({
+        provider: "braintree",
+        refundId: result.transaction.id,
+        status: result.transaction.status,
+        amount: parseFloat(result.transaction.amount),
+      });
+    });
   });
 };

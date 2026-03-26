@@ -38,7 +38,11 @@ exports.decrypt = (encryptedData) => {
   const iv = Buffer.from(ivStr, "base64");
   const tag = Buffer.from(tagStr, "base64");
 
-  const decipher = crypto.createDecipheriv(ALGORITHM, SECRET_KEY, iv);
+  const decipher = crypto.createDecipheriv(
+    env.ENCRYPTION_ALGORITHM,
+    SECRET_KEY,
+    iv,
+  );
   decipher.setAuthTag(tag);
 
   let decrypted = decipher.update(encrypted, "base64", "utf8");
