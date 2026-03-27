@@ -125,3 +125,76 @@ exports.refundPayment = async (amount, transactionId, credentials) => {
     amount: refund.amount / 100,
   };
 };
+
+exports.getRefundsByMerchantId = async (
+  credentials,
+  filters = {},
+  page = 1,
+  pageSize = 50,
+) => {
+  const stripe = getStripe(credentials);
+
+  const refunds = await stripe.refunds.list({
+    limit: pageSize,
+  });
+
+  let data = refunds.data.map((refund) => ({
+    provider: "stripe",
+    refundId: refund.id,
+    transactionId: refund.charge,
+    amount: refund.amount / 100,
+    status: refund.status,
+    currency: refund.currency,
+    createdAt: new Date(refund.created * 1000),
+  }));
+
+  // Apply filters
+  if (filters.startDate) {
+    data = data.filter(
+      (r) => new Date(r.createdAt) >= new Date(filters.startDate),
+    );
+  }
+
+  if (filters.endDate) {
+    data = data.filter(
+      (r) => new Date(r.createdAt) <= new Date(filters.endDate),
+    );
+  }
+
+  if (filters.status) {
+    data = data.filter((r) => r.status === filters.status);
+  }
+
+  return {
+    data,
+    meta: {
+      pageSize,
+      count: data.length,
+      hasMore: refunds.has_more,
+      nextCursor: refunds.has_more ? page + 1 : null,
+      previousCursor: page > 1 ? page - 1 : null,
+    },
+  };
+};
+
+exports.getRefundsByTransactionId = async (transactionId, credentials) => {
+  const stripe = getStripe(credentials);
+
+  if (!transactionId) {
+    throw Boom.badRequest("Transaction ID is required");
+  }
+
+  const refunds = await stripe.refunds.list({
+    charge: transactionId,
+  });
+
+  return refunds.data.map((refund) => ({
+    provider: "stripe",
+    refundId: refund.id,
+    transactionId: refund.charge,
+    amount: refund.amount / 100,
+    status: refund.status,
+    currency: refund.currency,
+    createdAt: new Date(refund.created * 1000),
+  }));
+};

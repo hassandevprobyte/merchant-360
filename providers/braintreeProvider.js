@@ -2,6 +2,9 @@ require("dotenv").config();
 const Boom = require("@hapi/boom");
 const braintree = require("braintree");
 
+// Helpers
+const braintreeHelper = require("../helpers/braintreeHelper");
+
 const getBraintree = (credentials) => {
   return new braintree.BraintreeGateway({
     environment: braintree.Environment.Sandbox,
@@ -140,4 +143,90 @@ exports.refundPayment = async (amount, transactionId, credentials) => {
       });
     });
   });
+};
+
+exports.getRefundsByMerchantId = async (
+  credentials,
+  filters = {},
+  page = 1,
+  pageSize = 50,
+) => {
+  const gateway = getBraintree(credentials);
+
+  // Search only refund transactions
+  const collection = await gateway.transaction.search((search) => {
+    search.type().is("credit");
+
+    if (filters.startDate && filters.endDate) {
+      search
+        .createdAt()
+        .between(new Date(filters.startDate), new Date(filters.endDate));
+    }
+
+    if (filters.transactionId) {
+      search.refundedTransactionId().is(filters.transactionId);
+    }
+  });
+
+  // Collect transactions from collection
+  const transactions =
+    await braintreeHelper.collectBraintreeResults(collection);
+
+  // Map refunds into unified format
+  let refunds = transactions.map((transaction) => ({
+    provider: "braintree",
+    refundId: transaction.id,
+    transactionId: transaction.refundedTransactionId,
+    amount: parseFloat(transaction.amount),
+    status: transaction.status,
+    currency: transaction.currencyIsoCode,
+    createdAt: transaction.createdAt,
+  }));
+
+  // Additional Filters
+  if (filters.status) {
+    refunds = refunds.filter((r) => r.status === filters.status);
+  }
+
+  // Pagination
+  const start = (page - 1) * pageSize;
+  const paginated = refunds.slice(start, start + pageSize);
+
+  return {
+    data: paginated,
+    meta: {
+      pageSize,
+      count: paginated.length,
+      total: refunds.length,
+      hasMore: refunds.length > start + pageSize,
+      nextCursor: refunds.length > start + pageSize ? page + 1 : null,
+      previousCursor: page > 1 ? page - 1 : null,
+    },
+  };
+};
+
+exports.getRefundsByTransactionId = async (transactionId, credentials) => {
+  const gateway = getBraintree(credentials);
+
+  if (!transactionId) {
+    throw Boom.badRequest("Transaction ID is required");
+  }
+
+  const transaction = await gateway.transaction.find(transactionId);
+
+  if (!transaction) {
+    throw Boom.notFound("Transaction not found");
+  }
+
+  const refunds = transaction.refunds || [];
+
+  return refunds.map((refund) => ({
+    provider: "braintree",
+    refundId: refund.id,
+    transactionId: refund.refundedTransactionId,
+    amount: parseFloat(refund.amount),
+    status: refund.status,
+    currency: refund.currencyIsoCode,
+    createdAt: refund.createdAt,
+  }));
 };

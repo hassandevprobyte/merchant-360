@@ -95,3 +95,64 @@ exports.refundTransaction = async ({ merchant, transactionId, amount }) => {
       throw Boom.badRequest("Merchant not supported");
   }
 };
+
+exports.getRefundsByMerchantId = async ({
+  merchant,
+  filters,
+  page,
+  pageSize,
+}) => {
+  switch (merchant.type) {
+    case "stripe":
+      return stripeProvider.getRefundsByMerchantId(
+        encryptData.decryptObjectValues(merchant.credentials),
+        filters,
+        page,
+        pageSize,
+      );
+
+    case "braintree":
+      return braintreeProvider.getRefundsByMerchantId(
+        encryptData.decryptObjectValues(merchant.credentials),
+        filters,
+        page,
+        pageSize,
+      );
+
+    case "authorize":
+      return authorizeProvider.getRefundsByMerchantId(
+        encryptData.decryptObjectValues(merchant.credentials),
+        filters,
+        page,
+        pageSize,
+      );
+
+    default:
+      throw Boom.badRequest("Merchant not supported");
+  }
+};
+
+exports.getRefundsByTransactionId = async ({ merchant, transactionId }) => {
+  switch (merchant.type) {
+    case "stripe":
+      return stripeProvider.getRefundsByTransactionId(
+        transactionId,
+        encryptData.decryptObjectValues(merchant.credentials),
+      );
+
+    case "braintree":
+      return braintreeProvider.getRefundsByTransactionId(
+        transactionId,
+        encryptData.decryptObjectValues(merchant.credentials),
+      );
+
+    case "authorize":
+      return authorizeProvider.getRefundsByTransactionId(
+        transactionId,
+        encryptData.decryptObjectValues(merchant.credentials),
+      );
+
+    default:
+      throw Boom.badRequest("Merchant not supported");
+  }
+};

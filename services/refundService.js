@@ -21,3 +21,41 @@ exports.createRefund = async (payload) => {
 
   return refundProvider.refundTransaction(refundPayload);
 };
+
+exports.getRefundsByMerchantId = async (payload) => {
+  const validatedPayload = joi.validate(
+    payload,
+    joiSchema.getRefundsByMerchantId,
+  );
+
+  const merchant = await merchantValidation.throwErrorIfMerchantDoesNotExists(
+    validatedPayload.id,
+  );
+
+  const refundPayload = {
+    merchant,
+    page: validatedPayload.page,
+    pageSize: validatedPayload.pageSize,
+    filters: validatedPayload.filters,
+  };
+
+  return refundProvider.getRefundsByMerchantId(refundPayload);
+};
+
+exports.getRefundsByTransactionId = async (payload) => {
+  const validatedPayload = joi.validate(
+    payload,
+    joiSchema.getRefundsByTransactionId,
+  );
+
+  const merchant = await merchantValidation.throwErrorIfMerchantDoesNotExists(
+    validatedPayload.merchant,
+  );
+
+  const refundPayload = {
+    merchant,
+    transactionId: validatedPayload.id,
+  };
+
+  return refundProvider.getRefundsByTransactionId(refundPayload);
+};

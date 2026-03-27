@@ -17,8 +17,8 @@ const getAuthorize = (credentials) => {
   return merchantAuth;
 };
 
-async function getSettledBatches() {
-  const merchantAuth = getAuthorize();
+async function getSettledBatches(credentials) {
+  const merchantAuth = getAuthorize(credentials);
 
   const request = new ApiContracts.GetSettledBatchListRequest();
   request.setMerchantAuthentication(merchantAuth);
@@ -37,8 +37,8 @@ async function getSettledBatches() {
   return response.getBatchList()?.getBatch() || [];
 }
 
-async function getTransactionsByBatch(batchId) {
-  const merchantAuth = getAuthorize();
+async function getTransactionsByBatch(batchId, credentials) {
+  const merchantAuth = getAuthorize(credentials);
 
   const request = new ApiContracts.GetTransactionListRequest();
   request.setMerchantAuthentication(merchantAuth);
@@ -58,8 +58,8 @@ async function getTransactionsByBatch(batchId) {
   return response.getTransactions()?.getTransaction() || [];
 }
 
-async function getUnsettledTransactions() {
-  const merchantAuth = getAuthorize();
+async function getUnsettledTransactions(credentials) {
+  const merchantAuth = getAuthorize(credentials);
 
   const request = new ApiContracts.GetUnsettledTransactionListRequest();
   request.setMerchantAuthentication(merchantAuth);
@@ -78,15 +78,20 @@ async function getUnsettledTransactions() {
   return response.getTransactions()?.getTransaction() || [];
 }
 
-exports.getTransactions = async (filters = {}, page = 1, pageSize = 50) => {
-  const batches = await getSettledBatches();
+exports.getTransactions = async (
+  filters = {},
+  page = 1,
+  pageSize = 50,
+  credentials,
+) => {
+  const batches = await getSettledBatches(credentials);
 
   const batchPromises = batches.map((b) =>
-    getTransactionsByBatch(b.getBatchId()),
+    getTransactionsByBatch(b.getBatchId(), credentials),
   );
   const [batchTransactions, unsettled] = await Promise.all([
     Promise.all(batchPromises),
-    getUnsettledTransactions(),
+    getUnsettledTransactions(credentials),
   ]);
 
   let allTransactions = [...batchTransactions.flat(), ...unsettled];
@@ -273,4 +278,106 @@ exports.refundPayment = async (amount, transactionId, credentials) => {
     status: refundTransaction.getResponseCode(),
     amount: refundAmount,
   };
+};
+
+exports.getRefundsByMerchantId = async (
+  credentials,
+  filters = {},
+  page = 1,
+  pageSize = 50,
+) => {
+  // Fetch settled and unsettled transactions
+  const batches = await getSettledBatches(credentials);
+
+  const batchPromises = batches.map((b) =>
+    getTransactionsByBatch(b.getBatchId(), credentials),
+  );
+
+  const [batchTransactions, unsettled] = await Promise.all([
+    Promise.all(batchPromises),
+    getUnsettledTransactions(credentials),
+  ]);
+
+  let allTransactions = [...batchTransactions.flat(), ...unsettled];
+
+  // ✅ Filter ONLY refunds
+  let refunds = allTransactions.filter(
+    (t) => t.transactionType === "refundTransaction",
+  );
+
+  // Apply filters
+  if (filters.startDate) {
+    refunds = refunds.filter(
+      (t) => new Date(t.submitTimeUTC) >= new Date(filters.startDate),
+    );
+  }
+
+  if (filters.endDate) {
+    refunds = refunds.filter(
+      (t) => new Date(t.submitTimeUTC) <= new Date(filters.endDate),
+    );
+  }
+
+  if (filters.status) {
+    refunds = refunds.filter((t) => t.transactionStatus === filters.status);
+  }
+
+  // Pagination
+  const start = (page - 1) * pageSize;
+  const paginated = refunds.slice(start, start + pageSize);
+
+  return {
+    data: paginated.map((t) => ({
+      provider: "authorize",
+      refundId: t.transId,
+      transactionId: t.refTransId,
+      amount: parseFloat(t.settleAmount || 0),
+      status: t.transactionStatus,
+      createdAt: t.submitTimeUTC,
+    })),
+    meta: {
+      pageSize,
+      count: paginated.length,
+      total: refunds.length,
+      hasMore: refunds.length > start + pageSize,
+      nextCursor: refunds.length > start + pageSize ? page + 1 : null,
+      previousCursor: page > 1 ? page - 1 : null,
+    },
+  };
+};
+
+exports.getRefundsByTransactionId = async (transactionId, credentials) => {
+  const merchantAuth = getAuthorize(credentials);
+
+  if (!transactionId) {
+    throw Boom.badRequest("Transaction ID is required");
+  }
+
+  const request = new ApiContracts.GetTransactionDetailsRequest();
+  request.setMerchantAuthentication(merchantAuth);
+  request.setTransId(transactionId);
+
+  const responseRaw = await authorizeHelper.executeController(
+    ApiControllers.GetTransactionDetailsController,
+    request,
+  );
+
+  const response = new ApiContracts.GetTransactionDetailsResponse(responseRaw);
+
+  if (response.getMessages().getResultCode() !== "Ok") {
+    throw Boom.notFound("Transaction not found");
+  }
+
+  const transaction = response.getTransaction();
+  const refunds = transaction.getRefunds() || [];
+
+  return refunds.map((refund) => ({
+    provider: "authorize",
+    refundId: refund.getRefundId(),
+    transactionId: transactionId,
+    amount: parseFloat(refund.getRefundAmount()),
+    status: refund.getRefundStatus(),
+    currency: transaction.getCurrencyCode(),
+    createdAt: refund.getSubmitTimeUTC(),
+  }));
 };
