@@ -9,6 +9,8 @@ const routes = [
   { path: "/users", route: require("./userRoute") },
   { path: "/merchants", route: require("./merchantRoute") },
   { path: "/transactions", route: require("./transactionRoute") },
+  { path: "/paymentLinks", route: require("./paymentLinkRoute") },
+  { path: "/refunds", route: require("./refundRoute") },
 ];
 
 routes.forEach((route) => router.use(route.path, protect, route.route));

@@ -21,4 +21,8 @@ exports.error = {
     notFound: "Merchant not found",
     titleExists: "Merchant title already exists",
   },
+  paymentLink: {
+    notFound: "Payment link not found",
+    alreadyExists: "Payment link already exists",
+  },
 };
